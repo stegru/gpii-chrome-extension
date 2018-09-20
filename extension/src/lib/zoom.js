@@ -28,11 +28,13 @@ fluid.defaults("gpii.chrome.zoom", {
         onError: null,
         onTabOpened: null,
         onTabUpdated: null,
-        onWindowFocusChanged: null
+        onWindowFocusChanged: null,
+        onZoomChange: null
     },
     eventRelayMap: {
         "chrome.tabs.onCreated": "onTabOpened",
         "chrome.tabs.onUpdated": "onTabUpdated",
+        "chrome.tabs.onZoomChange": "onZoomChange",
         "chrome.windows.onFocusChanged": "onWindowFocusChanged"
     },
     invokers: {
@@ -46,6 +48,10 @@ fluid.defaults("gpii.chrome.zoom", {
         },
         updateTab: {
             funcName: "gpii.chrome.zoom.updateTab",
+            args: ["{that}", "{arguments}.0"]
+        },
+        zoomChanged: {
+            funcName: "gpii.chrome.zoom.zoomChanged",
             args: ["{that}", "{arguments}.0"]
         }
     },
@@ -64,15 +70,23 @@ fluid.defaults("gpii.chrome.zoom", {
             funcName: "{that}.updateTab",
             args: "{arguments}.2"
         },
+        "onZoomChange": {
+            funcName: "{that}.zoomChanged",
+            args: "{arguments}.0"
+        },
         "onWindowFocusChanged.applyZoomSettings": "{that}.applyZoomSettings"
+    },
+    members: {
+        tabOverride: []
     }
 });
 
 gpii.chrome.zoom.applyZoomInTab = function (that, tab, value) {
     // set the zoom value if it hasn't already been set.
     chrome.tabs.getZoom(tab.id, function (currentZoom) {
-        if (currentZoom !== value) {
-            chrome.tabs.setZoom(tab.id, value, function () {
+        var newValue = gpii.chrome.zoom.getTabZoom(that, tab.id, value);
+        if (currentZoom !== newValue) {
+            chrome.tabs.setZoom(tab.id, newValue, function () {
                 if (chrome.runtime.lastError) {
                     fluid.log("Could not apply zoom in tab'",
                               tab.url, "', error was: ",
@@ -99,4 +113,21 @@ gpii.chrome.zoom.applyZoomSettings = function (that) {
 gpii.chrome.zoom.updateTab = function (that, tab) {
     var value = that.model.magnifierEnabled ? that.model.magnification : 1;
     that.applyZoomInTab(tab, value);
+};
+
+gpii.chrome.zoom.zoomChanged = function (that, zoomChange) {
+    // If the tab's new zoom level is different to what it should be, it must have been set by the user. Store the
+    // difference so it can be used when the extension adjusts the tab's zoom.
+    if (zoomChange.newZoomFactor === gpii.chrome.zoom.getTabZoom(that, zoomChange.tabId)) {
+        delete that.tabOverride[zoomChange.tabId];
+    } else {
+        that.tabOverride[zoomChange.tabId] = zoomChange.newZoomFactor - that.model.magnification;
+    }
+};
+
+// Gets the zoom level for the given tab, taking into account any user-given adjustment.
+gpii.chrome.zoom.getTabZoom = function (that, tabId, newValue) {
+    var baseValue = that.model.magnifierEnabled ? (newValue || that.model.magnification) : 1;
+    var tabOverride = that.tabOverride[tabId] || 0;
+    return baseValue + tabOverride;
 };
