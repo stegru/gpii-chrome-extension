@@ -107,6 +107,7 @@ gpii.chrome.zoom.applyZoomSettings = function (that) {
 };
 
 gpii.chrome.zoom.updateTab = function (that, tab) {
+    chrome.tabs.setZoomSettings(tab.id, { scope: "per-tab" });
     var value = that.model.magnifierEnabled ? that.model.magnification : 1;
     that.applyZoomInTab(tab, value);
 };
@@ -115,7 +116,8 @@ gpii.chrome.zoom.zoomChanged = function (that, zoomChange) {
     // If the tab's new zoom level is different to what it should be, it must have been set by the user. Use this new
     // setting as the extension's setting.
     if (that.model.magnifierEnabled) {
-        if (zoomChange.newZoomFactor !== that.model.magnification) {
+        if ((zoomChange.newZoomFactor !== that.model.magnification)
+            && (zoomChange.newZoomFactor !== zoomChange.oldZoomFactor)) {
             that.applier.change("magnification", zoomChange.newZoomFactor);
         }
     }
