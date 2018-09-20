@@ -77,7 +77,7 @@ fluid.defaults("gpii.chrome.zoom", {
         "onWindowFocusChanged.applyZoomSettings": "{that}.applyZoomSettings"
     },
     members: {
-        tabOverride: []
+        tabOverride: {}
     }
 });
 
@@ -118,9 +118,7 @@ gpii.chrome.zoom.updateTab = function (that, tab) {
 gpii.chrome.zoom.zoomChanged = function (that, zoomChange) {
     // If the tab's new zoom level is different to what it should be, it must have been set by the user. Store the
     // difference so it can be used when the extension adjusts the tab's zoom.
-    if (zoomChange.newZoomFactor === gpii.chrome.zoom.getTabZoom(that, zoomChange.tabId)) {
-        delete that.tabOverride[zoomChange.tabId];
-    } else {
+    if (zoomChange.newZoomFactor !== gpii.chrome.zoom.getTabZoom(that, zoomChange.tabId)) {
         that.tabOverride[zoomChange.tabId] = zoomChange.newZoomFactor - that.model.magnification;
     }
 };
