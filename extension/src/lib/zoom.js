@@ -117,15 +117,17 @@ gpii.chrome.zoom.updateTab = function (that, tab) {
 };
 
 gpii.chrome.zoom.zoomChanged = function (that, zoomChange) {
-    // If the tab's new zoom level is different to what it should be, it must have been set by the user. Store the
-    // difference so it can be used when the extension adjusts the tab's zoom.
-    if (that.tabOverride.hasOwnProperty(zoomChange.tabId)) {
-        if (zoomChange.newZoomFactor !== gpii.chrome.zoom.getTabZoom(that, zoomChange.tabId)) {
-            that.tabOverride[zoomChange.tabId] = zoomChange.newZoomFactor - that.model.magnification;
+    if (zoomChange.newZoomFactor !== zoomChange.oldZoomFactor) {
+        if (that.tabOverride.hasOwnProperty(zoomChange.tabId)) {
+            // If the tab's new zoom level is different to what it should be, it must have been set by the user. Store
+            // the difference so it can be used when the extension adjusts the tab's zoom.
+            if (zoomChange.newZoomFactor !== gpii.chrome.zoom.getTabZoom(that, zoomChange.tabId)) {
+                that.tabOverride[zoomChange.tabId] = zoomChange.newZoomFactor - that.model.magnification;
+            }
+        } else {
+            // First time seeing this tab - ignore the initial zoom change
+            that.tabOverride[zoomChange.tabId] = 0;
         }
-    } else {
-        // First time seeing this tab - ignore the initial zoom change
-        that.tabOverride[zoomChange.tabId] = 0;
     }
 };
 
