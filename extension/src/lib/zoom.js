@@ -28,11 +28,13 @@ fluid.defaults("gpii.chrome.zoom", {
         onError: null,
         onTabOpened: null,
         onTabUpdated: null,
-        onWindowFocusChanged: null
+        onWindowFocusChanged: null,
+        onZoomChange: null
     },
     eventRelayMap: {
         "chrome.tabs.onCreated": "onTabOpened",
         "chrome.tabs.onUpdated": "onTabUpdated",
+        "chrome.tabs.onZoomChange": "onZoomChange",
         "chrome.windows.onFocusChanged": "onWindowFocusChanged"
     },
     invokers: {
@@ -46,6 +48,10 @@ fluid.defaults("gpii.chrome.zoom", {
         },
         updateTab: {
             funcName: "gpii.chrome.zoom.updateTab",
+            args: ["{that}", "{arguments}.0"]
+        },
+        zoomChanged: {
+            funcName: "gpii.chrome.zoom.zoomChanged",
             args: ["{that}", "{arguments}.0"]
         }
     },
@@ -63,6 +69,10 @@ fluid.defaults("gpii.chrome.zoom", {
         "onTabUpdated.setupTab": {
             funcName: "{that}.updateTab",
             args: "{arguments}.2"
+        },
+        "onZoomChange": {
+            funcName: "{that}.zoomChanged",
+            args: "{arguments}.0"
         },
         "onWindowFocusChanged.applyZoomSettings": "{that}.applyZoomSettings"
     }
@@ -99,4 +109,14 @@ gpii.chrome.zoom.applyZoomSettings = function (that) {
 gpii.chrome.zoom.updateTab = function (that, tab) {
     var value = that.model.magnifierEnabled ? that.model.magnification : 1;
     that.applyZoomInTab(tab, value);
+};
+
+gpii.chrome.zoom.zoomChanged = function (that, zoomChange) {
+    // If the tab's new zoom level is different to what it should be, it must have been set by the user. Use this new
+    // setting as the extension's setting.
+    if (that.model.magnifierEnabled) {
+        if (zoomChange.newZoomFactor !== that.model.magnification) {
+            that.applier.change("magnification", zoomChange.newZoomFactor);
+        }
+    }
 };
